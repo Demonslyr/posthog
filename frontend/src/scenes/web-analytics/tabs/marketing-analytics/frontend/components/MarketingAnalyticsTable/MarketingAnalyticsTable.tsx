@@ -1,8 +1,4 @@
-import { IconEllipsis, IconSort, IconPlus } from '@posthog/icons'
-import { IconArrowUp, IconArrowDown, IconBookmarkBorder } from 'lib/lemon-ui/icons'
-import { useActions, useValues } from 'kea'
-import { useCallback, useMemo } from 'react'
-
+import { useActions } from 'kea'
 import { Query } from '~/queries/Query/Query'
 import {
     MarketingAnalyticsBaseColumns,
@@ -21,12 +17,10 @@ import { marketingAnalyticsLogic } from '../../logic/marketingAnalyticsLogic'
 import { marketingAnalyticsSettingsLogic } from '../../logic/marketingAnalyticsSettingsLogic'
 import { DraftConversionGoalControls } from './DraftConversionGoalControls'
 
-interface MarketingAnalyticsTableProps {
+export type MarketingAnalyticsTableProps = {
     query: DataTableNode
     insightProps: InsightLogicProps
 }
-
-const QUERY_ORDER_BY_START_INDEX = 1
 
 export const MarketingAnalyticsTable = ({ query, insightProps }: MarketingAnalyticsTableProps): JSX.Element => {
     const { setMarketingAnalyticsOrderBy, clearMarketingAnalyticsOrderBy, saveDraftConversionGoal } =
@@ -192,17 +186,6 @@ export const MarketingAnalyticsTable = ({ query, insightProps }: MarketingAnalyt
     const marketingAnalyticsContext: QueryContext = {
         ...webAnalyticsDataTableQueryContext,
         insightProps,
-        columns: {
-            ...webAnalyticsDataTableQueryContext.columns,
-            // Indexes start at 1 because the orderBy field is 1-indexed e.g ORDER BY 1 DESC would sort by the first column
-            ...Object.values(MarketingAnalyticsBaseColumns).reduce((acc, column, index) => {
-                acc[column] = {
-                    renderTitle: makeMarketingSortableCell(column, index + QUERY_ORDER_BY_START_INDEX),
-                }
-                return acc
-            }, {} as Record<string, QueryContextColumn>),
-            ...conversionGoalColumns,
-        },
     }
 
     return (
@@ -211,7 +194,13 @@ export const MarketingAnalyticsTable = ({ query, insightProps }: MarketingAnalyt
                 <DraftConversionGoalControls />
             </div>
             <div className="relative marketing-analytics-table-container">
-                <Query query={queryWithOrderBy} readOnly={false} context={marketingAnalyticsContext} />
+                <Query
+                    query={query}
+                    readOnly={false}
+                    context={marketingAnalyticsContext}
+                    columnFeatures={[ColumnFeature.canSort]}
+                    setQuery={setQuery}
+                />
             </div>
         </div>
     )

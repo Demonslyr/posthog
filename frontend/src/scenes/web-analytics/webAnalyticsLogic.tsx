@@ -21,13 +21,11 @@ import {
     updateDatesWithInterval,
 } from 'lib/utils'
 import { isDefinitionStale } from 'lib/utils/definitions'
-import { dataWarehouseSettingsLogic } from 'scenes/data-warehouse/settings/dataWarehouseSettingsLogic'
 import { preflightLogic } from 'scenes/PreflightCheck/preflightLogic'
 import { Scene } from 'scenes/sceneTypes'
 import { teamLogic } from 'scenes/teamLogic'
 import { urls } from 'scenes/urls'
 import { userLogic } from 'scenes/userLogic'
-import { marketingAnalyticsSettingsLogic } from 'scenes/web-analytics/tabs/marketing-analytics/frontend/logic/marketingAnalyticsSettingsLogic'
 
 import { WEB_VITALS_COLORS, WEB_VITALS_THRESHOLDS } from '~/queries/nodes/WebVitals/definitions'
 import { hogqlQuery } from '~/queries/query'
@@ -86,6 +84,8 @@ import { getDashboardItemId, getNewInsightUrlFactory } from './insightsUtils'
 import { marketingAnalyticsLogic } from './tabs/marketing-analytics/frontend/logic/marketingAnalyticsLogic'
 import type { webAnalyticsLogicType } from './webAnalyticsLogicType'
 import posthog from 'posthog-js'
+import { marketingAnalyticsTableLogic } from './tabs/marketing-analytics/frontend/logic/marketingAnalyticsTableLogic'
+import { getOrderBy, injectDynamicConversionGoal } from './tabs/marketing-analytics/frontend/logic/utils'
 
 export interface WebTileLayout {
     /** The class has to be spelled out without interpolation, as otherwise Tailwind can't pick it up. */
@@ -442,10 +442,6 @@ export const webAnalyticsLogic = kea<webAnalyticsLogicType>([
             ['isDev'],
             authorizedUrlListLogic({ type: AuthorizedUrlListType.WEB_ANALYTICS, actionId: null, experimentId: null }),
             ['authorizedUrls'],
-            marketingAnalyticsSettingsLogic,
-            ['sources_map', 'conversion_goals'],
-            dataWarehouseSettingsLogic,
-            ['dataWarehouseTables', 'selfManagedTables'],
             marketingAnalyticsLogic,
             [
                 'loading',
@@ -2506,6 +2502,9 @@ export const webAnalyticsLogic = kea<webAnalyticsLogicType>([
                     return null
                 }
 
+                const typedQuery = query?.source as MarketingAnalyticsTableQuery | undefined
+                const select = injectDynamicConversionGoal(typedQuery?.select || defaultColumns, dynamicConversionGoal)
+                const orderBy = getOrderBy(typedQuery, select)
                 return {
                     kind: NodeKind.DataTableNode,
                     source: {
@@ -2518,6 +2517,7 @@ export const webAnalyticsLogic = kea<webAnalyticsLogicType>([
                         filterTestAccounts: filterTestAccounts,
                         draftConversionGoal: draftConversionGoal,
                         limit: 200,
+                        orderBy,
                         tags: MARKETING_ANALYTICS_DEFAULT_QUERY_TAGS,
                         select: [
                             draftConversionGoal ? draftConversionGoal.conversion_goal_name : null,
