@@ -12,6 +12,7 @@ from posthog.schema import (
     ConversionGoalFilter1,
     ConversionGoalFilter2,
     ConversionGoalFilter3,
+    MarketingAnalyticsBaseColumns,
     MarketingAnalyticsHelperForColumnNames,
     MarketingAnalyticsTableQuery,
     MarketingAnalyticsTableQueryResponse,
@@ -211,8 +212,8 @@ class MarketingAnalyticsTableQueryRunner(QueryRunner):
         # Build the CTE SELECT query
         return ast.SelectQuery(select=select_columns, select_from=union_join_expr, group_by=group_by_exprs)
 
-    def _build_select_columns_mapping(self, processors: list[ConversionGoalProcessor]) -> dict[str, ast.Expr]:
-        all_columns: dict[str, ast.Expr] = {str(k): v for k, v in BASE_COLUMN_MAPPING.items()}
+    def _build_select_columns_mapping(self, processors: list[ConversionGoalProcessor]) -> dict[str, ast.Alias]:
+        all_columns: dict[str, ast.Alias] = {str(k): v for k, v in BASE_COLUMN_MAPPING.items()}
         for processor in processors:
             conversion_goal_expr, cost_per_goal_expr = processor.generate_select_columns()
             all_columns.update(
@@ -231,7 +232,7 @@ class MarketingAnalyticsTableQueryRunner(QueryRunner):
             conversion_joins = []
 
         # Combine base and conversion goal columns
-        all_columns = []
+        all_columns: list[ast.Alias] = []
         try:
             if self.query.select is None or len(self.query.select) == 0:
                 all_columns = list(conversion_columns_mapping.values())
@@ -251,7 +252,7 @@ class MarketingAnalyticsTableQueryRunner(QueryRunner):
             from_clause = self._append_joins(from_clause, conversion_joins)
 
         # Build ORDER BY
-        order_by_exprs = self._build_order_by_exprs()
+        order_by_exprs = self._build_order_by_exprs(all_columns)
 
         # Build LIMIT and OFFSET
         limit = self.query.limit or DEFAULT_LIMIT
@@ -259,7 +260,7 @@ class MarketingAnalyticsTableQueryRunner(QueryRunner):
         actual_limit = limit + PAGINATION_EXTRA  # Request one extra for pagination
 
         return ast.SelectQuery(
-            select=all_columns,
+            select=cast(list[ast.Expr], all_columns),
             select_from=from_clause,
             order_by=order_by_exprs,
             limit=ast.Constant(value=actual_limit),
@@ -275,23 +276,26 @@ class MarketingAnalyticsTableQueryRunner(QueryRunner):
             base_join.next_join = current_join
         return initial_join
 
-    def _build_order_by_exprs(self) -> list[ast.OrderExpr]:
+    def _build_order_by_exprs(self, select_columns: list[ast.Alias]) -> list[ast.OrderExpr]:
         """Build ORDER BY expressions from query orderBy with proper null handling"""
 
-        order_by_exprs = []
+        order_by_exprs: list[ast.OrderExpr] = []
+        select_columns_aliases = [column.alias for column in select_columns]
 
         if hasattr(self.query, "orderBy") and self.query.orderBy and len(self.query.orderBy) > 0:
             for order_expr_str in self.query.orderBy:
                 column_name, order_by = order_expr_str
-                order_by_exprs.append(
-                    ast.OrderExpr(
-                        expr=ast.Field(chain=[column_name]), order=cast(Literal["ASC", "DESC"], str(order_by))
+                if column_name in select_columns_aliases:
+                    order_by_exprs.append(
+                        ast.OrderExpr(
+                            expr=ast.Field(chain=[column_name]), order=cast(Literal["ASC", "DESC"], str(order_by))
+                        )
                     )
-                )
         else:
-            # Build default order by: campaign_costs.total_cost DESC
-            default_field = ast.Field(chain=[CAMPAIGN_COST_CTE_NAME, TOTAL_COST_FIELD])
-            order_by_exprs.append(ast.OrderExpr(expr=default_field, order="DESC"))
+            if MarketingAnalyticsBaseColumns.TOTAL_COST.value in select_columns_aliases:
+                # Build default order by: Total Cost DESC
+                default_field = ast.Field(chain=[MarketingAnalyticsBaseColumns.TOTAL_COST.value])
+                order_by_exprs.append(ast.OrderExpr(expr=default_field, order="DESC"))
 
         return order_by_exprs
 
@@ -301,13 +305,13 @@ class MarketingAnalyticsTableQueryRunner(QueryRunner):
         """Create conversion goal processors for reuse across different methods"""
         processors = []
         for index, conversion_goal in enumerate(conversion_goals):
-            # Optimization and only create a processor if the conversion goal and cost per goal are in the select clause
-            if (
-                self.query.select
-                and conversion_goal.conversion_goal_name in self.query.select
+            # Create processor if select is None (all columns) or if conversion goal columns are explicitly selected
+            should_create = self.query.select is None or (
+                conversion_goal.conversion_goal_name in self.query.select
                 and f"{MarketingAnalyticsHelperForColumnNames.COST_PER} {conversion_goal.conversion_goal_name}"
                 in self.query.select
-            ):
+            )
+            if should_create:
                 logger.info(f"Creating conversion goal processor for {conversion_goal.conversion_goal_name}")
                 processor = ConversionGoalProcessor(goal=conversion_goal, index=index, team=self.team)
                 processors.append(processor)
