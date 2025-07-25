@@ -12800,8 +12800,7 @@ class DataTableNode(BaseModel):
     )
     kind: Literal["DataTableNode"] = "DataTableNode"
     pinnedColumns: Optional[list[str]] = Field(
-        default=None,
-        description="Columns that are pinned to the left side of the table and stay visible when scrolling",
+        default=None, description="Columns that are sticky when scrolling horizontally"
     )
     propertiesViaUrl: Optional[bool] = Field(default=None, description="Link properties via the URL (default: false)")
     response: Optional[
