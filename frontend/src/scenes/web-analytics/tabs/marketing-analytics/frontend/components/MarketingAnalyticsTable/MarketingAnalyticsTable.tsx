@@ -191,17 +191,27 @@ export const MarketingAnalyticsTable = ({ query, insightProps }: MarketingAnalyt
     return (
         <div className="bg-surface-primary">
             <div className="p-4 border-b border-border bg-bg-light">
-                <DraftConversionGoalControls />
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <DraftConversionGoalControls />
+                    </div>
+                    <div className="self-start">
+                        <LemonButton type="secondary" icon={<IconGear />} onClick={showColumnConfigModal}>
+                            Configure columns
+                        </LemonButton>
+                    </div>
+                </div>
             </div>
             <div className="relative marketing-analytics-table-container">
                 <Query
                     query={query}
                     readOnly={false}
                     context={marketingAnalyticsContext}
-                    columnFeatures={[ColumnFeature.canSort]}
+                    columnFeatures={[ColumnFeature.canSort, ColumnFeature.canRemove]}
                     setQuery={setQuery}
                 />
             </div>
+            <MarketingAnalyticsColumnConfigModal />
         </div>
     )
 }

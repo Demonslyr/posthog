@@ -40,6 +40,7 @@ import {
     DataTableNode,
     EventsNode,
     InsightVizNode,
+    MarketingAnalyticsHelperForColumnNames,
     MarketingAnalyticsTableQuery,
     NodeKind,
     QueryLogTags,
@@ -85,7 +86,12 @@ import { marketingAnalyticsLogic } from './tabs/marketing-analytics/frontend/log
 import type { webAnalyticsLogicType } from './webAnalyticsLogicType'
 import posthog from 'posthog-js'
 import { marketingAnalyticsTableLogic } from './tabs/marketing-analytics/frontend/logic/marketingAnalyticsTableLogic'
-import { getOrderBy, injectDraftConversionGoal } from './tabs/marketing-analytics/frontend/logic/utils'
+import {
+    getOrderBy,
+    orderArrayByPreference,
+    getSortedColumnsByArray,
+    isDraftConversionGoalColumn,
+} from './tabs/marketing-analytics/frontend/logic/utils'
 
 export interface WebTileLayout {
     /** The class has to be spelled out without interpolation, as otherwise Tailwind can't pick it up. */
@@ -2506,8 +2512,10 @@ export const webAnalyticsLogic = kea<webAnalyticsLogicType>([
                 const select = injectDynamicConversionGoal(typedQuery?.select || defaultColumns, dynamicConversionGoal)
                 const orderBy = getOrderBy(typedQuery, select)
                 return {
+                    ...query,
                     kind: NodeKind.DataTableNode,
                     source: {
+                        ...marketingQuery,
                         kind: NodeKind.MarketingAnalyticsTableQuery,
                         dateRange: {
                             date_from: marketingDateFilter.dateFrom,
