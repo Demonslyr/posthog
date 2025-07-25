@@ -331,7 +331,7 @@ export const marketingAnalyticsLogic = kea<marketingAnalyticsLogicType>([
             actions.resetConversionGoalInput()
         },
         resetConversionGoalInput: () => {
-            // Clear the dynamic goal when resetting local goal
+            // Clear the draft goal when resetting local goal
             actions.setDraftConversionGoal(null)
         },
     })),
