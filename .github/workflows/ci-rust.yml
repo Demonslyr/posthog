@@ -82,10 +82,10 @@ jobs:
                 package:
                     - batch-import-worker
                     - capture
+                    - common-database
                     - cyclotron-core
                     - cyclotron-node
                     - cyclotron-janitor
-                    - cyclotron-fetch
                     - cymbal
                     - feature-flags
                     - hook-api
@@ -94,6 +94,7 @@ jobs:
                     - kafka-deduplicator
                     - log-capture
                     - property-defs-rs
+                    - serve-metrics
         needs: changes
         runs-on: depot-ubuntu-24.04-4
         timeout-minutes: 10
