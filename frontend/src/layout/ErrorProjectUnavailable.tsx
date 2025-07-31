@@ -1,6 +1,8 @@
-import { Link } from '@posthog/lemon-ui'
 import { useValues } from 'kea'
 import { useEffect, useState } from 'react'
+
+import { Link } from '@posthog/lemon-ui'
+
 import { CreateOrganizationModal } from 'scenes/organization/CreateOrganizationModal'
 import { teamLogic } from 'scenes/teamLogic'
 import { urls } from 'scenes/urls'
@@ -28,7 +30,7 @@ export function ErrorProjectUnavailable(): JSX.Element {
         }
         options.push(<>reach out to your administrator for access</>)
         setOptions(options)
-    }, [])
+    }, [projectCreationForbiddenReason, user.organization.teams, user.organization.teams.length])
 
     const listOptions = (): JSX.Element => (
         <>

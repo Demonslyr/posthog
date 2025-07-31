@@ -1,10 +1,12 @@
 import './PlayerFrame.scss'
 
-import { Handler, viewportResizeDimension } from '@posthog/rrweb-types'
 import useSize from '@react-hook/size'
 import clsx from 'clsx'
 import { useActions, useValues } from 'kea'
 import { useEffect, useRef } from 'react'
+
+import { Handler, viewportResizeDimension } from '@posthog/rrweb-types'
+
 import { sessionRecordingPlayerLogic } from 'scenes/session-recordings/player/sessionRecordingPlayerLogic'
 
 export const PlayerFrame = (): JSX.Element => {
@@ -18,7 +20,7 @@ export const PlayerFrame = (): JSX.Element => {
         if (frameRef.current) {
             setRootFrame(frameRef.current)
         }
-    }, [frameRef, sessionRecordingId])
+    }, [frameRef, sessionRecordingId, setRootFrame])
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const containerDimensions = useSize(containerRef)
@@ -36,12 +38,12 @@ export const PlayerFrame = (): JSX.Element => {
             player.replayer.off('resize', updatePlayerDimensions as Handler)
             window.removeEventListener('resize', windowResize)
         }
-    }, [player?.replayer])
+    }, [player?.replayer, updatePlayerDimensions, player, windowResize])
 
     // Recalculate the player size when the player changes dimensions
     useEffect(() => {
         windowResize()
-    }, [containerDimensions])
+    }, [containerDimensions, windowResize])
 
     const windowResize = (): void => {
         updatePlayerDimensions(replayDimensionRef.current)
