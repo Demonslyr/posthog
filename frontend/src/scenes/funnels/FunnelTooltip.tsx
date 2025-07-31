@@ -151,15 +151,7 @@ export function useFunnelTooltip(showPersonsModal: boolean): React.RefObject<HTM
             tooltipEl.style.left = 'revert'
             tooltipEl.style.top = 'revert'
         }
-    }, [
-        isTooltipShown,
-        tooltipOrigin,
-        currentTooltip,
-        showPersonsModal,
-        querySource.aggregation_group_type_index,
-        breakdownFilter,
-        aggregationLabel,
-    ])
+    }, [isTooltipShown, tooltipOrigin, currentTooltip])
 
     return vizRef
 }

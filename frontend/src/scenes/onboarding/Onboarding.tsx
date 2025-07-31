@@ -107,17 +107,7 @@ const OnboardingWrapper = ({
         steps = steps.filter(Boolean)
 
         setAllSteps(steps)
-    }, [
-        children,
-        billingLoading,
-        minAdminRestrictionReason,
-        currentOrganization,
-        shouldShowBillingStep,
-        shouldShowDataWarehouseStep,
-        billing.products,
-        shouldShowReverseProxyStep,
-        productKey,
-    ])
+    }, [children, billingLoading, minAdminRestrictionReason, currentOrganization])
 
     useEffect(() => {
         if (!allSteps.length || (billingLoading && waitForBilling)) {
@@ -125,7 +115,7 @@ const OnboardingWrapper = ({
         }
 
         setAllOnboardingSteps(allSteps)
-    }, [allSteps, billingLoading, setAllOnboardingSteps, waitForBilling])
+    }, [allSteps])
 
     if (!product || !children) {
         return <></>

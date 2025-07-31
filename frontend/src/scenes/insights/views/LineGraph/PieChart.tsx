@@ -273,28 +273,7 @@ export function PieChart({
             } as ChartOptions<'pie'>,
         })
         return () => newChart.destroy()
-    }, [
-        datasets,
-        hiddenLegendIndexes,
-        labels,
-        labelGroupType,
-        isPercentStackView,
-        _datasets.length,
-        showValuesOnSeries,
-        tooltipConfig,
-        trendsFilter,
-        showLabelOnSeries,
-        highlightSeries,
-        formula,
-        breakdownFilter,
-        onClick,
-        aggregationLabel,
-        trendsFilter.showLegend,
-        tooltipConfig.renderCount,
-        disableHoverOffset,
-        tooltipConfig.hideColorCol,
-        showPersonsModal,
-    ])
+    }, [datasets, hiddenLegendIndexes])
 
     return (
         <div className="absolute w-full h-full" data-attr={dataAttr}>

@@ -155,18 +155,7 @@ export function useDragAndSnap({
             document.removeEventListener('mousemove', handleMouseMove)
             document.removeEventListener('mouseup', handleMouseUp)
         }
-    }, [
-        isDragging,
-        dragOffset,
-        onPositionChange,
-        hasDragged,
-        mouseDownPosition,
-        cachedBottomOffset,
-        dragElementRef.current.elementWidth,
-        dragElementRef.current.elementHeight,
-        containerRef.current,
-        currentSide,
-    ])
+    }, [isDragging, dragOffset, onPositionChange, hasDragged, mouseDownPosition, cachedBottomOffset])
 
     const handleMouseDown = (e: React.MouseEvent): void => {
         if (disabled || e.button !== 0) {

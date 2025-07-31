@@ -30,7 +30,7 @@ export function ErrorProjectUnavailable(): JSX.Element {
         }
         options.push(<>reach out to your administrator for access</>)
         setOptions(options)
-    }, [projectCreationForbiddenReason, user.organization.teams, user.organization.teams.length])
+    }, [])
 
     const listOptions = (): JSX.Element => (
         <>

@@ -20,7 +20,7 @@ export const PlayerFrame = (): JSX.Element => {
         if (frameRef.current) {
             setRootFrame(frameRef.current)
         }
-    }, [frameRef, sessionRecordingId, setRootFrame])
+    }, [frameRef, sessionRecordingId])
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const containerDimensions = useSize(containerRef)
@@ -38,12 +38,10 @@ export const PlayerFrame = (): JSX.Element => {
             player.replayer.off('resize', updatePlayerDimensions as Handler)
             window.removeEventListener('resize', windowResize)
         }
-    }, [player?.replayer, updatePlayerDimensions, player, windowResize])
+    }, [player?.replayer])
 
     // Recalculate the player size when the player changes dimensions
-    useEffect(() => {
-        windowResize()
-    }, [containerDimensions, windowResize])
+    useEffect(() => windowResize(), [containerDimensions])
 
     const windowResize = (): void => {
         updatePlayerDimensions(replayDimensionRef.current)

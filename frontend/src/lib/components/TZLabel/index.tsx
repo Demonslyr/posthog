@@ -47,7 +47,7 @@ const TZLabelPopoverContent = React.memo(function TZLabelPopoverContent({
 
     useEffect(() => {
         reportTimezoneComponentViewed('label', currentTeam?.timezone, shortTimeZone())
-    }, [reportTimezoneComponentViewed, currentTeam.timezone])
+    }, [])
 
     return (
         <div className={clsx('TZLabelPopover', showSeconds && 'TZLabelPopover--seconds')}>

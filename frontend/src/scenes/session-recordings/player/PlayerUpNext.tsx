@@ -62,14 +62,7 @@ export function PlayerUpNext({ playlistLogic }: PlayerUpNextProps): JSX.Element 
         }
 
         return () => clearTimeout(timeoutRef.current)
-    }, [
-        endReached,
-        !!nextSessionRecording,
-        similarRecordingsCount,
-        setPlayNextAnimationInterrupted,
-        goToRecording,
-        nextSessionRecording.id,
-    ])
+    }, [endReached, !!nextSessionRecording, similarRecordingsCount])
 
     useEffect(() => {
         if (playNextAnimationInterrupted) {

@@ -71,7 +71,7 @@ export function PayGateMini({
                 gate_variant: gateVariant,
             })
         }
-    }, [gateVariant, productWithFeature.type, feature])
+    }, [gateVariant])
 
     const handleCtaClick = (): void => {
         if (handleSubmit) {
