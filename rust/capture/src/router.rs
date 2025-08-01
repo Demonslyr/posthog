@@ -152,22 +152,40 @@ pub fn router<
         )
         .layer(DefaultBodyLimit::max(BATCH_BODY_SIZE));
 
-    let batch_router = Router::new()
-        .route(
-            "/batch",
-            post(v0_endpoint::event_next)
-                .get(v0_endpoint::event_next)
-                .options(v0_endpoint::options),
-        )
-        .route(
-            "/batch/",
-            post(v0_endpoint::event_next)
-                .get(v0_endpoint::event_next)
-                .options(v0_endpoint::options),
-        )
-        .layer(DefaultBodyLimit::max(BATCH_BODY_SIZE)); // Have to use this, rather than RequestBodyLimitLayer, because we use `Bytes` in the handler (this limit applies specifically to Bytes body types)
+    // TEMPORARY: use is_mirror_deploy flag as ESCAPE HATCH if this goes badly in deploy
+    let mut batch_router = Router::new();
+    batch_router = if is_mirror_deploy {
+        batch_router
+            .route(
+                "/batch",
+                post(v0_endpoint::event)
+                    .get(v0_endpoint::event)
+                    .options(v0_endpoint::options),
+            )
+            .route(
+                "/batch/",
+                post(v0_endpoint::event)
+                    .get(v0_endpoint::event)
+                    .options(v0_endpoint::options),
+            )
+    } else {
+        batch_router
+            .route(
+                "/batch",
+                post(v0_endpoint::event_next)
+                    .get(v0_endpoint::event_next)
+                    .options(v0_endpoint::options),
+            )
+            .route(
+                "/batch/",
+                post(v0_endpoint::event_next)
+                    .get(v0_endpoint::event_next)
+                    .options(v0_endpoint::options),
+            )
+    };
+    batch_router = batch_router.layer(DefaultBodyLimit::max(BATCH_BODY_SIZE)); // Have to use this, rather than RequestBodyLimitLayer, because we use `Bytes` in the handler (this limit applies specifically to Bytes body types)
 
-    let event_router = Router::new()
+    let mut event_router = Router::new()
         // legacy endpoints registered here
         .route(
             "/e",
@@ -216,20 +234,25 @@ pub fn router<
             post(v0_endpoint::event_next)
                 .get(v0_endpoint::event_next)
                 .options(v0_endpoint::options),
+        );
+
+    // TEMPORARY: use is_mirror_deploy flag as ESCAPE HATCH if this goes badly in deploy
+    event_router = if is_mirror_deploy {
+        event_router.route(
+            "/i/v0/e",
+            post(v0_endpoint::event)
+                .get(v0_endpoint::event)
+                .options(v0_endpoint::options),
         )
-        .route(
+    } else {
+        event_router.route(
             "/i/v0/e",
             post(v0_endpoint::event_next)
                 .get(v0_endpoint::event_next)
                 .options(v0_endpoint::options),
         )
-        .route(
-            "/i/v0/e/",
-            post(v0_endpoint::event_next)
-                .get(v0_endpoint::event_next)
-                .options(v0_endpoint::options),
-        )
-        .layer(DefaultBodyLimit::max(EVENT_BODY_SIZE));
+    };
+    event_router = event_router.layer(DefaultBodyLimit::max(EVENT_BODY_SIZE));
 
     let status_router = Router::new()
         .route("/", get(index))
