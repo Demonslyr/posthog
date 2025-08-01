@@ -29,6 +29,7 @@ import {
     FilterType,
     LegacyRecordingFilters,
     LogEntryPropertyFilter,
+    MatchedRecordingEvent,
     PropertyFilterType,
     PropertyOperator,
     RecordingDurationFilter,
@@ -69,7 +70,7 @@ interface EventNamesMatching {
 
 interface EventUUIDsMatching {
     matchType: 'uuid'
-    eventUUIDs: string[]
+    matchedEvents: MatchedRecordingEvent[]
 }
 
 interface BackendEventsMatching {
