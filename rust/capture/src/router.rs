@@ -238,19 +238,33 @@ pub fn router<
 
     // TEMPORARY: use is_mirror_deploy flag as ESCAPE HATCH if this goes badly in deploy
     event_router = if is_mirror_deploy {
-        event_router.route(
-            "/i/v0/e",
-            post(v0_endpoint::event)
-                .get(v0_endpoint::event)
-                .options(v0_endpoint::options),
-        )
+        event_router
+            .route(
+                "/i/v0/e",
+                post(v0_endpoint::event)
+                    .get(v0_endpoint::event)
+                    .options(v0_endpoint::options),
+            )
+            .route(
+                "/i/v0/e/",
+                post(v0_endpoint::event)
+                    .get(v0_endpoint::event)
+                    .options(v0_endpoint::options),
+            )
     } else {
-        event_router.route(
-            "/i/v0/e",
-            post(v0_endpoint::event_next)
-                .get(v0_endpoint::event_next)
-                .options(v0_endpoint::options),
-        )
+        event_router
+            .route(
+                "/i/v0/e",
+                post(v0_endpoint::event_next)
+                    .get(v0_endpoint::event_next)
+                    .options(v0_endpoint::options),
+            )
+            .route(
+                "/i/v0/e/",
+                post(v0_endpoint::event)
+                    .get(v0_endpoint::event)
+                    .options(v0_endpoint::options),
+            )
     };
     event_router = event_router.layer(DefaultBodyLimit::max(EVENT_BODY_SIZE));
 
