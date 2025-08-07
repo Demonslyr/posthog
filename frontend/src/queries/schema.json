@@ -11561,11 +11561,20 @@
         "ExperimentStatsBase": {
             "additionalProperties": false,
             "properties": {
+                "denominator_sum": {
+                    "type": "number"
+                },
+                "denominator_sum_squares": {
+                    "type": "number"
+                },
                 "key": {
                     "type": "string"
                 },
                 "number_of_samples": {
                     "$ref": "#/definitions/integer"
+                },
+                "numerator_denominator_sum_product": {
+                    "type": "number"
                 },
                 "sum": {
                     "type": "number"
@@ -11580,11 +11589,20 @@
         "ExperimentStatsBaseValidated": {
             "additionalProperties": false,
             "properties": {
+                "denominator_sum": {
+                    "type": "number"
+                },
+                "denominator_sum_squares": {
+                    "type": "number"
+                },
                 "key": {
                     "type": "string"
                 },
                 "number_of_samples": {
                     "$ref": "#/definitions/integer"
+                },
+                "numerator_denominator_sum_product": {
+                    "type": "number"
                 },
                 "sum": {
                     "type": "number"
@@ -11743,6 +11761,12 @@
                     "minItems": 2,
                     "type": "array"
                 },
+                "denominator_sum": {
+                    "type": "number"
+                },
+                "denominator_sum_squares": {
+                    "type": "number"
+                },
                 "key": {
                     "type": "string"
                 },
@@ -11752,6 +11776,9 @@
                 },
                 "number_of_samples": {
                     "$ref": "#/definitions/integer"
+                },
+                "numerator_denominator_sum_product": {
+                    "type": "number"
                 },
                 "significant": {
                     "type": "boolean"
@@ -11783,6 +11810,12 @@
                     "minItems": 2,
                     "type": "array"
                 },
+                "denominator_sum": {
+                    "type": "number"
+                },
+                "denominator_sum_squares": {
+                    "type": "number"
+                },
                 "key": {
                     "type": "string"
                 },
@@ -11792,6 +11825,9 @@
                 },
                 "number_of_samples": {
                     "$ref": "#/definitions/integer"
+                },
+                "numerator_denominator_sum_product": {
+                    "type": "number"
                 },
                 "p_value": {
                     "type": "number"
