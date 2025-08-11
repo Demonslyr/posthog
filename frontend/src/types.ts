@@ -4499,6 +4499,7 @@ export enum ActivityScope {
     ANNOTATION = 'Annotation',
     FEATURE_FLAG = 'FeatureFlag',
     PERSON = 'Person',
+    PERSONAL_API_KEY = 'PersonalAPIKey',
     GROUP = 'Group',
     INSIGHT = 'Insight',
     PLUGIN = 'Plugin',
