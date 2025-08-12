@@ -24,7 +24,8 @@ export interface RawPostgresPersonRepository {
         isIdentified: boolean,
         uuid: string,
         distinctIds?: { distinctId: string; version?: number }[],
-        tx?: TransactionClient
+        tx?: TransactionClient,
+        forcedId?: number
     ): Promise<CreatePersonResult>
 
     updatePerson(

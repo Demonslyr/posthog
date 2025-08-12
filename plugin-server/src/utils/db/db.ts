@@ -125,6 +125,8 @@ export const POSTGRES_UNAVAILABLE_ERROR_MESSAGES = [
 export class DB {
     /** Postgres connection router for database access. */
     postgres: PostgresRouter
+    /** Postgres connection router for database access for persons migration. */
+    postgresPersonMigration: PostgresRouter
     /** Redis used for various caches. */
     redisPool: GenericPool<Redis.Redis>
 
@@ -139,12 +141,14 @@ export class DB {
 
     constructor(
         postgres: PostgresRouter,
+        postgresPersonMigration: PostgresRouter,
         redisPool: GenericPool<Redis.Redis>,
         kafkaProducer: KafkaProducerWrapper,
         pluginsDefaultLogLevel: PluginLogLevel,
         personAndGroupsCacheTtl = 1
     ) {
         this.postgres = postgres
+        this.postgresPersonMigration = postgresPersonMigration
         this.redisPool = redisPool
         this.kafkaProducer = kafkaProducer
         this.pluginsDefaultLogLevel = pluginsDefaultLogLevel
