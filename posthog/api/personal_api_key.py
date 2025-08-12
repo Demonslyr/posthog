@@ -4,21 +4,23 @@ import uuid
 from django.utils import timezone
 from rest_framework import response, serializers, status, viewsets
 from rest_framework.permissions import IsAuthenticated, BasePermission
+from django.dispatch import receiver
+from django.db.models.signals import pre_delete
 
 from posthog.api.utils import action
 from posthog.auth import PersonalAPIKeyAuthentication, SessionAuthentication
 from posthog.models import PersonalAPIKey, User
 from posthog.models.personal_api_key import hash_key_value
-from posthog.models.activity_logging.activity_log import Detail, log_activity, changes_between, ActivityContextBase
+from posthog.models.activity_logging.activity_log import changes_between
+from posthog.models.activity_logging.personal_api_key_utils import (
+    log_personal_api_key_scope_change,
+    log_personal_api_key_activity,
+)
 from posthog.models.signals import model_activity_signal
-from django.dispatch import receiver
-from django.db.models.signals import pre_delete
-import dataclasses
-from typing import Optional
-from posthog.scopes import API_SCOPE_ACTIONS, API_SCOPE_OBJECTS
 from posthog.models.team.team import Team
 from posthog.models.utils import generate_random_token_personal, mask_key_value
 from posthog.permissions import TimeSensitiveActionPermission
+from posthog.scopes import API_SCOPE_ACTIONS, API_SCOPE_OBJECTS
 from posthog.user_permissions import UserPermissions
 
 MAX_API_KEYS_PER_USER = 10  # Same as in scopes.tsx
@@ -200,49 +202,24 @@ class PersonalAPIKeyViewSet(viewsets.ModelViewSet):
         return response.Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@dataclasses.dataclass(frozen=True)
-class PersonalAPIKeyContext(ActivityContextBase):
-    user_id: Optional[int] = None
-    user_email: Optional[str] = None
-    user_name: Optional[str] = None
-
-
-def _log_personal_api_key_activity(api_key: PersonalAPIKey, activity: str, user, was_impersonated: bool, changes=None):
-    """Log activity for a PersonalAPIKey across all relevant organizations."""
-    serializer = PersonalAPIKeySerializer()
-    organization_ids = serializer.get_scoped_organization_ids(api_key)
-
-    for org_id in organization_ids:
-        log_activity(
-            organization_id=org_id,
-            team_id=None,
-            user=user,
-            was_impersonated=was_impersonated,
-            item_id=api_key.id,
-            scope="PersonalAPIKey",
-            activity=activity,
-            detail=Detail(
-                changes=changes,
-                name=api_key.label,
-                context=PersonalAPIKeyContext(
-                    user_id=api_key.user_id,
-                    user_email=api_key.user.email,
-                    user_name=api_key.user.get_full_name(),
-                ),
-            ),
-        )
-
-
 @receiver(model_activity_signal, sender=PersonalAPIKey)
 def handle_personal_api_key_change(
     sender, scope, before_update, after_update, activity, user, was_impersonated=False, **kwargs
 ):
     changes = changes_between(scope, previous=before_update, current=after_update)
-    _log_personal_api_key_activity(after_update, activity, user, was_impersonated, changes)
+
+    # Check if scope changed (scoped_teams or scoped_organizations)
+    scope_fields = ["scoped_teams", "scoped_organizations"]
+    scope_changed = any(change.field in scope_fields for change in changes if change.field)
+
+    if scope_changed and activity == "updated":
+        log_personal_api_key_scope_change(before_update, after_update, user, was_impersonated, changes)
+    else:
+        log_personal_api_key_activity(after_update, activity, user, was_impersonated, changes)
 
 
 @receiver(pre_delete, sender=PersonalAPIKey)
 def handle_personal_api_key_delete(sender, instance, **kwargs):
     from posthog.models.activity_logging.model_activity import get_current_user, get_was_impersonated
 
-    _log_personal_api_key_activity(instance, "deleted", get_current_user(), get_was_impersonated())
+    log_personal_api_key_activity(instance, "deleted", get_current_user(), get_was_impersonated())
