@@ -11507,7 +11507,7 @@
                     "$ref": "#/definitions/FunnelConversionWindowTimeUnit"
                 },
                 "denominator": {
-                    "$ref": "#/definitions/EventsNode"
+                    "$ref": "#/definitions/ExperimentMetricSource"
                 },
                 "kind": {
                     "const": "ExperimentMetric",
@@ -11521,7 +11521,7 @@
                     "type": "string"
                 },
                 "numerator": {
-                    "$ref": "#/definitions/EventsNode"
+                    "$ref": "#/definitions/ExperimentMetricSource"
                 },
                 "response": {
                     "type": "object"
@@ -11541,14 +11541,14 @@
             "additionalProperties": false,
             "properties": {
                 "denominator": {
-                    "$ref": "#/definitions/EventsNode"
+                    "$ref": "#/definitions/ExperimentMetricSource"
                 },
                 "metric_type": {
                     "const": "ratio",
                     "type": "string"
                 },
                 "numerator": {
-                    "$ref": "#/definitions/EventsNode"
+                    "$ref": "#/definitions/ExperimentMetricSource"
                 }
             },
             "required": ["metric_type", "numerator", "denominator"],
@@ -25876,6 +25876,22 @@
         },
         "isExperimentMeanMetric": {
             "$comment": "(metric: ExperimentMetric) => metric is ExperimentMeanMetric",
+            "properties": {
+                "namedArgs": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "metric": {
+                            "$ref": "#/definitions/ExperimentMetric"
+                        }
+                    },
+                    "required": ["metric"],
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "isExperimentRatioMetric": {
+            "$comment": "(metric: ExperimentMetric) => metric is ExperimentRatioMetric",
             "properties": {
                 "namedArgs": {
                     "additionalProperties": false,
