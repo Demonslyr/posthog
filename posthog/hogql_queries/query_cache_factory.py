@@ -2,8 +2,8 @@ from typing import Optional, TYPE_CHECKING
 
 
 from posthog.hogql_queries.query_cache_base import QueryCacheManagerBase
-from posthog.hogql_queries.query_cache import DjangoCacheQueryCacheManager
 from posthog.hogql_queries.query_cache_s3 import S3QueryCacheManager
+from posthog.hogql_queries.query_cache_dual import DualCacheManager
 from posthog.hogql_queries.legacy_compatibility.feature_flag import query_cache_use_s3
 from posthog.models import Team
 
@@ -23,7 +23,7 @@ def get_query_cache_manager(
     Factory function to create the appropriate query cache manager based on feature flags.
 
     Uses S3QueryCacheManager if the 'query-cache-use-s3' feature flag is enabled for the team/user,
-    otherwise uses DjangoCacheQueryCacheManager.
+    otherwise uses DualCacheManager (writes to both S3 and Redis, reads from Redis only).
 
     Args:
         team: The team to get cache manager for
@@ -42,7 +42,7 @@ def get_query_cache_manager(
             dashboard_id=dashboard_id,
         )
     else:
-        return DjangoCacheQueryCacheManager(
+        return DualCacheManager(
             team_id=team.pk,
             cache_key=cache_key,
             insight_id=insight_id,
@@ -62,4 +62,4 @@ def get_query_cache_manager_class(*, team: Team, user: Optional["User"] = None) 
     if use_s3:
         return S3QueryCacheManager
     else:
-        return DjangoCacheQueryCacheManager
+        return DualCacheManager
