@@ -48,3 +48,18 @@ def get_query_cache_manager(
             insight_id=insight_id,
             dashboard_id=dashboard_id,
         )
+
+
+def get_query_cache_manager_class(*, team: Team, user: Optional["User"] = None) -> type[QueryCacheManagerBase]:
+    """
+    Factory function to get the appropriate query cache manager class based on feature flags.
+
+    This is useful for operations that need to call class methods like get_stale_insights
+    or clean_up_stale_insights.
+    """
+    use_s3 = query_cache_use_s3(team, user=user)
+
+    if use_s3:
+        return S3QueryCacheManager
+    else:
+        return DjangoCacheQueryCacheManager
