@@ -1210,9 +1210,9 @@ export const dashboardLogic = kea<dashboardLogicType>([
     })),
     listeners(({ actions, values, cache, props, sharedListeners }) => ({
         resetDashboardFilters: () => {
-            actions.setDates(values.dashboard.filters.date_from ?? null, values.dashboard.filters.date_to ?? null)
-            actions.setProperties(values.dashboard.filters.properties ?? null)
-            actions.setBreakdownFilter(values.dashboard.filters.breakdown_filter ?? null)
+            actions.setDates(values.dashboard?.filters.date_from ?? null, values.dashboard?.filters.date_to ?? null)
+            actions.setProperties(values.dashboard?.filters.properties ?? null)
+            actions.setBreakdownFilter(values.dashboard?.filters.breakdown_filter ?? null)
         },
         setRefreshError: sharedListeners.reportRefreshTiming,
         setRefreshStatuses: sharedListeners.reportRefreshTiming,
