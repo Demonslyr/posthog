@@ -10,7 +10,7 @@ import { OrganizationMembershipLevel } from 'lib/constants'
 import { Dayjs, dayjs, now } from 'lib/dayjs'
 import { Link } from 'lib/lemon-ui/Link'
 import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
-import { clearDOMTextSelection, getJSHeapMemory, shouldCancelQuery, toParams, uuid } from 'lib/utils'
+import { clearDOMTextSelection, getJSHeapMemory, objectClean, shouldCancelQuery, toParams, uuid } from 'lib/utils'
 import { DashboardEventSource, eventUsageLogic } from 'lib/utils/eventUsageLogic'
 import uniqBy from 'lodash.uniqby'
 import { Layout, Layouts } from 'react-grid-layout'
@@ -62,14 +62,16 @@ import {
     AUTO_REFRESH_INITIAL_INTERVAL_SECONDS,
     BREAKPOINT_COLUMN_COUNTS,
     DASHBOARD_MIN_REFRESH_INTERVAL_MINUTES,
-    encodeURLVariables,
     getInsightWithRetry,
     IS_TEST_MODE,
     layoutsByTile,
     MAX_TILES_FOR_AUTOPREVIEW,
-    parseURLVariables,
-    QUERY_VARIABLES_KEY,
     runWithLimit,
+    SEARCH_PARAM_VARIABLES_KEY,
+    parseURLFilters,
+    parseURLVariables,
+    encodeURLFilters,
+    encodeURLVariables,
 } from './dashboardUtils'
 
 export interface DashboardLogicProps {
@@ -174,11 +176,11 @@ export const dashboardLogic = kea<dashboardLogicType>([
 
         /**
          * Auto-refresh while on page.
-         **/
+         */
         setAutoRefresh: (enabled: boolean, interval: number) => ({ enabled, interval }),
         resetInterval: true,
 
-        /*
+        /**
          * Dashboard filters & variables.
          */
         setDates: (date_from: string | null, date_to: string | null) => ({
@@ -198,11 +200,11 @@ export const dashboardLogic = kea<dashboardLogicType>([
             breakdownColors,
             dataColorThemeId,
         }),
+        resetIntermittentFilters: () => true,
         resetDashboardFilters: () => true,
         previewTemporaryFilters: true,
         resetVariables: true,
         setInitialVariablesLoaded: (initialVariablesLoaded: boolean) => ({ initialVariablesLoaded }),
-        updateDashboardLastRefresh: (lastDashboardRefresh: Dayjs) => ({ lastDashboardRefresh }),
         updateFiltersAndLayoutsAndVariables: true,
         overrideVariableValue: (variableId: string, value: any, isNull: boolean) => ({
             variableId,
@@ -221,6 +223,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
         setSubscriptionMode: (enabled: boolean, id?: number | 'new') => ({ enabled, id }),
         /** Set the dashboard mode, see DashboardMode for details. */
         setDashboardMode: (mode: DashboardMode | null, source: DashboardEventSource | null) => ({ mode, source }),
+        updateDashboardLastRefresh: (lastDashboardRefresh: Dayjs) => ({ lastDashboardRefresh }),
 
         /**
          * Dashboard layout & tiles.
@@ -331,7 +334,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
                         const dashboard: DashboardType<InsightModel> = await api.update(
                             `api/environments/${values.currentTeamId}/dashboards/${props.id}`,
                             {
-                                filters: values.filters,
+                                filters: values.temporaryFilters,
                                 variables: values.temporaryVariables,
                                 breakdown_colors: values.temporaryBreakdownColors,
                                 data_color_theme_id: values.dataColorThemeId,
@@ -758,7 +761,9 @@ export const dashboardLogic = kea<dashboardLogicType>([
                 loadDashboardFailure: () => false,
             },
         ],
-        /** Dashboard variables */
+        /**
+         * Dashboard variables
+         */
         initialVariablesLoaded: [
             false,
             {
@@ -766,40 +771,12 @@ export const dashboardLogic = kea<dashboardLogicType>([
             },
         ],
 
-        /** Dashboard filters */
-        filters: [
-            {
-                date_from: null,
-                date_to: null,
-                properties: null,
-                breakdown_filter: null,
-            } as DashboardFilter,
-            {
-                setFiltersAndLayoutsAndVariables: (state, { filters }) => ({
-                    ...state,
-                    ...filters,
-                }),
-                loadDashboardSuccess: (state, { dashboard, payload }) => {
-                    const result = dashboard
-                        ? {
-                              ...state,
-                              // don't update filters if we're previewing
-                              ...(payload?.action === DashboardLoadAction.Preview
-                                  ? {}
-                                  : {
-                                        date_from: dashboard?.filters.date_from || null,
-                                        date_to: dashboard?.filters.date_to || null,
-                                        properties: dashboard?.filters.properties || [],
-                                        breakdown_filter: dashboard?.filters.breakdown_filter || null,
-                                    }),
-                          }
-                        : state
+        /**
+         * Dashboard filters
+         */
 
-                    return result
-                },
-            },
-        ],
-        temporaryFilters: [
+        /** Used for storing intermittent changes to filters in the edit bar, when they are not yet in the URL, i.e. not previewing. */
+        intermittentFilters: [
             {
                 date_from: null,
                 date_to: null,
@@ -820,16 +797,12 @@ export const dashboardLogic = kea<dashboardLogicType>([
                     ...state,
                     breakdown_filter: breakdown_filter || null,
                 }),
-                loadDashboardSuccess: (state, { dashboard }) =>
-                    dashboard
-                        ? {
-                              ...state,
-                              date_from: dashboard?.filters.date_from || null,
-                              date_to: dashboard?.filters.date_to || null,
-                              properties: dashboard?.filters.properties || [],
-                              breakdown_filter: dashboard?.filters.breakdown_filter || null,
-                          }
-                        : state,
+                resetIntermittentFilters: () => ({
+                    date_from: null,
+                    date_to: null,
+                    properties: null,
+                    breakdown_filter: null,
+                }),
             },
         ],
     })),
@@ -838,27 +811,30 @@ export const dashboardLogic = kea<dashboardLogicType>([
             (s) => [s.dashboard],
             (dashboard) => (dashboard?.tiles.length || 0) < MAX_TILES_FOR_AUTOPREVIEW,
         ],
-        filtersUpdated: [
-            (s) => [s.temporaryFilters, s.dashboard],
-            (temporaryFilters, dashboard) => {
-                // both aren't falsy && both aren't equal
-                const isDateFromUpdated =
-                    !(!temporaryFilters.date_from && !dashboard?.filters.date_from) &&
-                    temporaryFilters.date_from !== dashboard?.filters.date_from
-
-                const isDateToUpdated =
-                    !(!temporaryFilters.date_to && !dashboard?.filters.date_to) &&
-                    temporaryFilters.date_to !== dashboard?.filters.date_to
-
-                const isPropertiesUpdated =
-                    JSON.stringify(temporaryFilters.properties ?? []) !==
-                    JSON.stringify(dashboard?.filters.properties ?? [])
-
-                const isBreakdownUpdated =
-                    !(!temporaryFilters.breakdown_filter && !dashboard?.filters.breakdown_filter) &&
-                    temporaryFilters.breakdown_filter !== dashboard?.filters.breakdown_filter
-
-                return isDateFromUpdated || isDateToUpdated || isPropertiesUpdated || isBreakdownUpdated
+        hasIntermittentFilters: [
+            (s) => [s.intermittentFilters],
+            (intermittentFilters) =>
+                Object.keys(objectClean((intermittentFilters || {}) as Record<string, unknown>, { removeNulls: true }))
+                    .length > 0,
+        ],
+        showEditBarApplyPopover: [
+            (s) => [s.canAutoPreview, s.hasIntermittentFilters],
+            (canAutoPreview, hasIntermittentFilters) => !canAutoPreview && hasIntermittentFilters,
+        ],
+        temporaryFilters: [
+            () => [router.selectors.searchParams],
+            (searchParams) => {
+                const urlFilters = parseURLFilters(searchParams)
+                console.debug('urlFilters', urlFilters)
+                return urlFilters
+            },
+        ],
+        effectiveEditBarFilters: [
+            (s) => [s.dashboard, s.temporaryFilters, s.intermittentFilters],
+            (dashboard, temporaryFilters, intermittentFilters) => {
+                console.debug('temporaryFilters', temporaryFilters)
+                console.debug('intermittentFilters', intermittentFilters)
+                return { ...dashboard.filters, ...temporaryFilters, ...intermittentFilters }
             },
         ],
         effectiveVariablesAndAssociatedInsights: [
@@ -1012,7 +988,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
                 return (
                     dashboardLoading ||
                     Object.values(refreshStatus).some((s) => s.loading || s.queued) ||
-                    (QUERY_VARIABLES_KEY in router.values.searchParams && !initialVariablesLoaded)
+                    (SEARCH_PARAM_VARIABLES_KEY in router.values.searchParams && !initialVariablesLoaded)
                 )
             },
         ],
@@ -1201,7 +1177,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
                     // the loadDashboardSuccess listener will initiate a refresh
                     actions.loadDashboardSuccess(props.dashboard)
                 } else {
-                    if (!(QUERY_VARIABLES_KEY in router.values.searchParams)) {
+                    if (!(SEARCH_PARAM_VARIABLES_KEY in router.values.searchParams)) {
                         actions.loadDashboard({
                             action: DashboardLoadAction.InitialLoad,
                         })
@@ -1235,9 +1211,9 @@ export const dashboardLogic = kea<dashboardLogicType>([
     })),
     listeners(({ actions, values, cache, props, sharedListeners }) => ({
         resetDashboardFilters: () => {
-            actions.setDates(values.filters.date_from ?? null, values.filters.date_to ?? null)
-            actions.setProperties(values.filters.properties ?? null)
-            actions.setBreakdownFilter(values.filters.breakdown_filter ?? null)
+            actions.setDates(values.dashboard.filters.date_from ?? null, values.dashboard.filters.date_to ?? null)
+            actions.setProperties(values.dashboard.filters.properties ?? null)
+            actions.setBreakdownFilter(values.dashboard.filters.breakdown_filter ?? null)
         },
         setRefreshError: sharedListeners.reportRefreshTiming,
         setRefreshStatuses: sharedListeners.reportRefreshTiming,
@@ -1579,20 +1555,21 @@ export const dashboardLogic = kea<dashboardLogicType>([
             })
         },
         previewTemporaryFilters: () => {
+            actions.resetIntermittentFilters()
             actions.loadDashboard({ action: DashboardLoadAction.Preview })
         },
         setProperties: () => {
-            if ((values.dashboard?.tiles.length || 0) < MAX_TILES_FOR_AUTOPREVIEW) {
+            if (values.canAutoPreview) {
                 actions.loadDashboard({ action: DashboardLoadAction.Preview })
             }
         },
         setDates: () => {
-            if ((values.dashboard?.tiles.length || 0) < MAX_TILES_FOR_AUTOPREVIEW) {
+            if (values.canAutoPreview) {
                 actions.loadDashboard({ action: DashboardLoadAction.Preview })
             }
         },
         setBreakdownFilter: () => {
-            if ((values.dashboard?.tiles.length || 0) < MAX_TILES_FOR_AUTOPREVIEW) {
+            if (values.canAutoPreview) {
                 actions.loadDashboard({ action: DashboardLoadAction.Preview })
             }
         },
@@ -1607,7 +1584,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
                 return
             }
 
-            if (QUERY_VARIABLES_KEY in router.values.searchParams) {
+            if (SEARCH_PARAM_VARIABLES_KEY in router.values.searchParams) {
                 actions.loadDashboard({
                     action: DashboardLoadAction.InitialLoadWithVariables,
                 })
@@ -1633,7 +1610,49 @@ export const dashboardLogic = kea<dashboardLogicType>([
         },
     })),
 
-    actionToUrl(({ values }) => ({
+    actionToUrl(({ values, actions }) => ({
+        previewTemporaryFilters: () => {
+            const { currentLocation } = router.values
+
+            const urlFilters = parseURLFilters(currentLocation.searchParams)
+            const newUrlFilters: DashboardFilter = {
+                ...urlFilters,
+                ...values.intermittentFilters,
+            }
+
+            const newSearchParams = {
+                ...currentLocation.searchParams,
+            }
+
+            return [
+                currentLocation.pathname,
+                { ...newSearchParams, ...encodeURLFilters(newUrlFilters) },
+                currentLocation.hashParams,
+            ]
+        },
+        setProperties: ({ properties }) => {
+            if (!values.canAutoPreview) {
+                return
+            }
+
+            const { currentLocation } = router.values
+
+            const urlFilters = parseURLFilters(currentLocation.searchParams)
+            const newUrlFilters: DashboardFilter = {
+                ...urlFilters,
+                properties,
+            }
+
+            const newSearchParams = {
+                ...currentLocation.searchParams,
+            }
+
+            return [
+                currentLocation.pathname,
+                { ...newSearchParams, ...encodeURLFilters(newUrlFilters) },
+                currentLocation.hashParams,
+            ]
+        },
         overrideVariableValue: ({ variableId, value }) => {
             const { currentLocation } = router.values
 
@@ -1662,7 +1681,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
         resetVariables: () => {
             const { currentLocation } = router.values
             const newSearchParams = { ...currentLocation.searchParams }
-            delete newSearchParams[QUERY_VARIABLES_KEY]
+            delete newSearchParams[SEARCH_PARAM_VARIABLES_KEY]
             return [currentLocation.pathname, newSearchParams, currentLocation.hashParams]
         },
     })),
