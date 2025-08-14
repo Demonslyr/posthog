@@ -1,7 +1,7 @@
 import { lemonToast } from '@posthog/lemon-ui'
 import api, { ApiMethodOptions, getJSONOrNull } from 'lib/api'
 import { currentSessionId } from 'lib/internalMetrics'
-import { objectClean, removeUndefinedAndNull, shouldCancelQuery, toParams } from 'lib/utils'
+import { objectClean, shouldCancelQuery, toParams } from 'lib/utils'
 import { Layouts } from 'react-grid-layout'
 
 import { getQueryBasedInsightModel } from '~/queries/nodes/InsightViz/utils'
@@ -264,4 +264,16 @@ export const encodeURLFilters = (filters: DashboardFilter): Record<string, strin
     }
 
     return encodedFilters
+}
+
+export function combineDashboardFilters(...filters: DashboardFilter[]): DashboardFilter {
+    return filters.reduce((combined, filter) => {
+        Object.keys(filter).forEach((key) => {
+            const value = (filter as Record<string, any>)[key]
+            if (value !== null && value !== undefined) {
+                ;(combined as Record<string, any>)[key] = value
+            }
+        })
+        return combined
+    }, {} as DashboardFilter)
 }

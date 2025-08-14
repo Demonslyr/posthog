@@ -72,6 +72,7 @@ import {
     parseURLVariables,
     encodeURLFilters,
     encodeURLVariables,
+    combineDashboardFilters,
 } from './dashboardUtils'
 
 export interface DashboardLogicProps {
@@ -277,7 +278,9 @@ export const dashboardLogic = kea<dashboardLogicType>([
                  */
                 loadDashboard: async ({ action, manualDashboardRefresh }, breakpoint) => {
                     actions.loadingDashboardItemsStarted(action, manualDashboardRefresh ?? false)
+
                     await breakpoint(200)
+                    actions.resetIntermittentFilters()
 
                     try {
                         const apiUrl = values.apiUrl('force_cache', values.temporaryFilters, values.temporaryVariables)
@@ -825,16 +828,13 @@ export const dashboardLogic = kea<dashboardLogicType>([
             () => [router.selectors.searchParams],
             (searchParams) => {
                 const urlFilters = parseURLFilters(searchParams)
-                console.debug('urlFilters', urlFilters)
                 return urlFilters
             },
         ],
         effectiveEditBarFilters: [
             (s) => [s.dashboard, s.temporaryFilters, s.intermittentFilters],
             (dashboard, temporaryFilters, intermittentFilters) => {
-                console.debug('temporaryFilters', temporaryFilters)
-                console.debug('intermittentFilters', intermittentFilters)
-                return { ...dashboard.filters, ...temporaryFilters, ...intermittentFilters }
+                return combineDashboardFilters(dashboard?.filters || {}, temporaryFilters, intermittentFilters)
             },
         ],
         effectiveVariablesAndAssociatedInsights: [
@@ -1555,7 +1555,6 @@ export const dashboardLogic = kea<dashboardLogicType>([
             })
         },
         previewTemporaryFilters: () => {
-            actions.resetIntermittentFilters()
             actions.loadDashboard({ action: DashboardLoadAction.Preview })
         },
         setProperties: () => {
