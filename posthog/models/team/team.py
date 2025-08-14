@@ -224,6 +224,7 @@ class CookielessServerHashMode(models.IntegerChoices):
 
 
 class SessionRecordingRetentionPeriod(models.TextChoices):
+    LEGACY = "legacy", "Legacy Retention"
     THIRTY_DAYS = "30d", "30 Days"
     NINETY_DAYS = "90d", "90 Days"
     ONE_YEAR = "1y", "1 Year"
@@ -331,9 +332,9 @@ class Team(UUIDClassicModel):
     session_recording_trigger_match_type_config = models.CharField(null=True, blank=True, max_length=24)
     session_replay_config = models.JSONField(null=True, blank=True)
     session_recording_retention_period = models.CharField(
-        max_length=3,
+        max_length=6,
         choices=SessionRecordingRetentionPeriod.choices,
-        default=SessionRecordingRetentionPeriod.THIRTY_DAYS,
+        default=SessionRecordingRetentionPeriod.LEGACY,
     )
     survey_config = models.JSONField(null=True, blank=True)
     capture_console_log_opt_in = models.BooleanField(null=True, blank=True, default=True)

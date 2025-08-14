@@ -1,1 +1,1 @@
-0821_team_session_recording_retention_period
+0822_alter_team_session_recording_retention_period
