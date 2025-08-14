@@ -10,7 +10,7 @@ import { OrganizationMembershipLevel } from 'lib/constants'
 import { Dayjs, dayjs, now } from 'lib/dayjs'
 import { Link } from 'lib/lemon-ui/Link'
 import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
-import { clearDOMTextSelection, getJSHeapMemory, objectClean, shouldCancelQuery, toParams, uuid } from 'lib/utils'
+import { clearDOMTextSelection, getJSHeapMemory, shouldCancelQuery, toParams, uuid } from 'lib/utils'
 import { DashboardEventSource, eventUsageLogic } from 'lib/utils/eventUsageLogic'
 import uniqBy from 'lodash.uniqby'
 import { Layout, Layouts } from 'react-grid-layout'
@@ -74,6 +74,7 @@ import {
     encodeURLVariables,
     combineDashboardFilters,
 } from './dashboardUtils'
+import { isDashboardFilterEmpty } from 'scenes/insights/insightSceneLogic'
 
 export interface DashboardLogicProps {
     id: number
@@ -816,9 +817,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
         ],
         hasIntermittentFilters: [
             (s) => [s.intermittentFilters],
-            (intermittentFilters) =>
-                Object.keys(objectClean((intermittentFilters || {}) as Record<string, unknown>, { removeNulls: true }))
-                    .length > 0,
+            (intermittentFilters) => !isDashboardFilterEmpty(intermittentFilters),
         ],
         showEditBarApplyPopover: [
             (s) => [s.canAutoPreview, s.hasIntermittentFilters],
@@ -1614,10 +1613,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
             const { currentLocation } = router.values
 
             const urlFilters = parseURLFilters(currentLocation.searchParams)
-            const newUrlFilters: DashboardFilter = {
-                ...urlFilters,
-                ...values.intermittentFilters,
-            }
+            const newUrlFilters: DashboardFilter = combineDashboardFilters(urlFilters, values.intermittentFilters)
 
             const newSearchParams = {
                 ...currentLocation.searchParams,
