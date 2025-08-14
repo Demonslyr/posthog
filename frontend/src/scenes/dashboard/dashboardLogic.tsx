@@ -1609,7 +1609,7 @@ export const dashboardLogic = kea<dashboardLogicType>([
         },
     })),
 
-    actionToUrl(({ values, actions }) => ({
+    actionToUrl(({ values }) => ({
         previewTemporaryFilters: () => {
             const { currentLocation } = router.values
 
@@ -1640,6 +1640,53 @@ export const dashboardLogic = kea<dashboardLogicType>([
             const newUrlFilters: DashboardFilter = {
                 ...urlFilters,
                 properties,
+            }
+
+            const newSearchParams = {
+                ...currentLocation.searchParams,
+            }
+
+            return [
+                currentLocation.pathname,
+                { ...newSearchParams, ...encodeURLFilters(newUrlFilters) },
+                currentLocation.hashParams,
+            ]
+        },
+        setDates: ({ date_from, date_to }) => {
+            if (!values.canAutoPreview) {
+                return
+            }
+
+            const { currentLocation } = router.values
+
+            const urlFilters = parseURLFilters(currentLocation.searchParams)
+            const newUrlFilters: DashboardFilter = {
+                ...urlFilters,
+                date_from,
+                date_to,
+            }
+
+            const newSearchParams = {
+                ...currentLocation.searchParams,
+            }
+
+            return [
+                currentLocation.pathname,
+                { ...newSearchParams, ...encodeURLFilters(newUrlFilters) },
+                currentLocation.hashParams,
+            ]
+        },
+        setBreakdownFilter: ({ breakdown_filter }) => {
+            if (!values.canAutoPreview) {
+                return
+            }
+
+            const { currentLocation } = router.values
+
+            const urlFilters = parseURLFilters(currentLocation.searchParams)
+            const newUrlFilters: DashboardFilter = {
+                ...urlFilters,
+                breakdown_filter,
             }
 
             const newSearchParams = {
